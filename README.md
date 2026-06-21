@@ -38,7 +38,7 @@ This project strictly follows the **MVVM (Model-View-ViewModel)** architectural 
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/Evailix/bit-frame-designer.git](https://github.com/Evailix/bit-frame-designer.git)
+   git clone https://github.com/Evailix/bit-frame-designer.git
    cd bit-frame-designer
    ```
 2. Install dependencies:
