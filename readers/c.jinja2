@@ -1,0 +1,43 @@
+{% macro fmt(hex_val, oct_val, raw_val) -%}
+  {%- if array_base == 16 -%}{{ hex_val }}{%- elif array_base == 8 -%}{{ oct_val }}{%- else -%}{{ raw_val }}{%- endif -%}
+{%- endmacro %}
+
+{% macro render_op(op, offset_var="0") -%}
+  {%- if op.byte_shift != 0 -%}
+    {%- set expr = "(inArray[" ~ offset_var ~ " + " ~ op.array_index ~ "] >> " ~ op.byte_shift ~ ")" -%}
+  {%- else -%}
+    {%- set expr = "inArray[" ~ offset_var ~ " + " ~ op.array_index ~ "]" -%}
+  {%- endif -%}
+  {%- set expr = expr ~ " & " ~ fmt(op.mask_hex, op.mask_oct, op.mask) -%}
+  {%- if op.val_shift != 0 -%}((uint32_t)({{ expr }}) << {{ op.val_shift }}){%- else -%}{{ expr }}{%- endif -%}
+{%- endmacro %}
+
+#include <stdint.h>
+
+{% if is_cyclical %}
+typedef struct {
+    {% for arg in args %}uint{{ arg.type_bits }}_t {{ arg.name }};
+    {% endfor %}
+} {{ struct_name }};
+
+void {{ function_name }}(const uint8_t* inArray, int count, {{ struct_name }}* outItems) {
+    int global_padding = {{ global_padding_bytes }};
+    int packet_size = {{ packet_size }};
+
+    for (int i = 0; i < count; i++) {
+        int offset = global_padding + (i * packet_size);
+
+        {% for field in fields %}
+        outItems[i].{{ field.name }} = {% for op in field.parts %}{% if field.parts|length > 1 %}({{ render_op(op, "offset") }}){% else %}{{ render_op(op, "offset") }}{% endif %}{{ " | " if not loop.last }}{% endfor %};
+        {% endfor %}
+    }
+}
+{% else %}
+void {{ function_name }}(const uint8_t* inArray, {% for arg in args %}uint{{ arg.type_bits }}_t* {{ arg.name }}{{ ", " if not loop.last }}{% endfor %}) {
+    int global_padding = {{ global_padding_bytes }};
+
+    {% for field in fields %}
+    *{{ field.name }} = {% for op in field.parts %}{% if field.parts|length > 1 %}({{ render_op(op, "global_padding") }}){% else %}{{ render_op(op, "global_padding") }}{% endif %}{{ " | " if not loop.last }}{% endfor %};
+    {% endfor %}
+}
+{% endif %}

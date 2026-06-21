@@ -1,0 +1,30 @@
+{% macro fmt(hex_val, oct_val, raw_val) -%}
+  {%- if array_base == 16 -%}{{ hex_val }}{%- elif array_base == 8 -%}{{ oct_val }}{%- else -%}{{ raw_val }}{%- endif -%}
+{%- endmacro %}
+
+{% macro render_op(op, var_prefix="") -%}
+  {%- set var_name = var_prefix ~ op.name -%}
+  {%- if op.val_shift == 0 -%}
+    {%- set expr = var_name ~ " & " ~ fmt(op.mask_hex, op.mask_oct, op.mask) -%}
+  {%- else -%}
+    {%- set expr = "(" ~ var_name ~ " >> " ~ op.val_shift ~ ") & " ~ fmt(op.mask_hex, op.mask_oct, op.mask) -%}
+  {%- endif -%}
+  {%- if op.byte_shift > 0 -%}({{ expr }}) << {{ op.byte_shift }}{%- else -%}{{ expr }}{%- endif -%}
+{%- endmacro %}
+
+{% if is_cyclical %}
+void {{ function_name }}(uint8_t* outArray, int count, const {{ struct_name }}* items) {
+    for (int i = 0; i < count; i++) {
+        int offset = {{ global_padding_bytes }} + (i * {{ packet_size }});
+        {% for byte in bytes %}
+        outArray[offset + {{ byte.index }}] = {% for op in byte.operations %}({{ render_op(op, "items[i].") }}){{ " | " }}{% endfor %}{% if byte.has_static %}{{ fmt(byte.static_hex, byte.static_oct, byte.static_val) }}{% else %}0{% endif %};
+        {% endfor %}
+    }
+}
+{% else %}
+void {{ function_name }}(uint8_t* outArray, {% for arg in args %}uint{{ arg.type_bits }}_t {{ arg.name }}{{ ", " if not loop.last }}{% endfor %}) {
+    {% for byte in bytes %}
+    outArray[{{ global_padding_bytes + byte.index }}] = {% for op in byte.operations %}({{ render_op(op) }}){{ " | " }}{% endfor %}{% if byte.has_static %}{{ fmt(byte.static_hex, byte.static_oct, byte.static_val) }}{% else %}0{% endif %};
+    {% endfor %}
+}
+{% endif %}

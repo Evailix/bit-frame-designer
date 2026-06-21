@@ -1,0 +1,41 @@
+{% macro fmt_kt(hex_val, raw_val) -%}
+  {%- if array_base == 16 -%}{{ hex_val }}u{%- else -%}{{ raw_val }}u{%- endif -%}
+{%- endmacro %}
+
+{% macro render_op(op, var_prefix="") -%}
+  {%- set var_name = var_prefix ~ op.name -%}
+  {%- if op.val_shift == 0 -%}
+    {%- set expr = var_name ~ " and " ~ fmt_kt(op.mask_hex, op.mask) -%}
+  {%- else -%}
+    {%- set expr = "(" ~ var_name ~ " shr " ~ op.val_shift ~ ") and " ~ fmt_kt(op.mask_hex, op.mask) -%}
+  {%- endif -%}
+  {%- if op.byte_shift > 0 -%}({{ expr }}) shl {{ op.byte_shift }}{%- else -%}{{ expr }}{%- endif -%}
+{%- endmacro %}
+
+{% if is_cyclical %}
+data class {{ struct_name }}(
+    {% for arg in args %}val {{ arg.name }}: UInt{{ ", " if not loop.last }}{% endfor %}
+)
+
+fun {{ function_name }}(items: List<{{ struct_name }}>): ByteArray {
+    val globalPadding = {{ global_padding_bytes }}
+    val packetSize = {{ packet_size }}
+    val data = ByteArray(globalPadding + (items.size * packetSize))
+
+    for (i in items.indices) {
+        val offset = globalPadding + (i * packetSize)
+        val item = items[i]
+
+        {% for byte in bytes %}
+        data[offset + {{ byte.index }}] = ({% for op in byte.operations %}({{ render_op(op, "item.") }}){{ " or " }}{% endfor %}{% if byte.has_static %}{{ fmt_kt(byte.static_hex, byte.static_val) }}{% else %}0u{% endif %}).toByte()
+        {% endfor %}
+    }
+    return data
+}
+{% else %}
+fun {{ function_name }}({% for arg in args %}{{ arg.name }}: UInt, {% endfor %}outArray: ByteArray) {
+    {% for byte in bytes %}
+    outArray[{{ global_padding_bytes + byte.index }}] = ({% for op in byte.operations %}({{ render_op(op) }}){{ " or " }}{% endfor %}{% if byte.has_static %}{{ fmt_kt(byte.static_hex, byte.static_val) }}{% else %}0u{% endif %}).toByte()
+    {% endfor %}
+}
+{% endif %}

@@ -1,0 +1,49 @@
+{% macro fmt_kt(hex_val, raw_val) -%}
+  {%- if array_base == 16 -%}{{ hex_val }}u{%- else -%}{{ raw_val }}u{%- endif -%}
+{%- endmacro %}
+
+{% macro render_op(op, padding_val=0) -%}
+  {%- set final_index = padding_val + op.array_index|int -%}
+
+  {%- if op.byte_shift != 0 -%}
+    {%- set expr = "data[" ~ final_index ~ "].toUInt() shr " ~ op.byte_shift -%}
+  {%- else -%}
+    {%- set expr = "data[" ~ final_index ~ "].toUInt()" -%}
+  {%- endif -%}
+  {%- set expr = expr ~ " and " ~ fmt_kt(op.mask_hex, op.mask) -%}
+  {%- if op.val_shift != 0 -%}({{ expr }}) shl {{ op.val_shift }}{%- else -%}{{ expr }}{%- endif -%}
+{%- endmacro %}
+
+{% if is_cyclical %}
+data class {{ struct_name }}(
+    {% for arg in args %}val {{ arg.name }}: UInt{{ ", " if not loop.last }}{% endfor %}
+)
+
+fun {{ function_name }}(data: ByteArray): List<{{ struct_name }}> {
+    val list = mutableListOf<{{ struct_name }}>()
+    val packetSize = {{ packet_size }}
+    val globalPadding = {{ global_padding_bytes }}
+    val count = (data.size - globalPadding) / packetSize
+
+    for (i in 0 until count) {
+        val offset = globalPadding + (i * packetSize)
+
+        {% for field in fields %}
+        val {{ field.name }} = {% for op in field.parts %}{% if field.parts|length > 1 %}({{ render_op(op, offset) }}){% else %}{{ render_op(op, offset) }}{% endif %}{{ " or " if not loop.last }}{% endfor %}
+        {% endfor %}
+
+        list.add(
+            {{ struct_name }}(
+                {% for arg in args %}{{ arg.name }} = {{ arg.name }}{{ ", " if not loop.last }}{% endfor %}
+            )
+        )
+    }
+    return list
+}
+{% else %}
+fun {{ function_name }}(data: ByteArray) {
+    {% for field in fields %}
+    val {{ field.name }} = {% for op in field.parts %}{% if field.parts|length > 1 %}({{ render_op(op, global_padding_bytes|int) }}){% else %}{{ render_op(op, global_padding_bytes|int) }}{% endif %}{{ " or " if not loop.last }}{% endfor %}
+    {% endfor %}
+}
+{% endif %}
