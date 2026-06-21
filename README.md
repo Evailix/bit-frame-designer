@@ -9,7 +9,8 @@ Built using **Python**, **Flet** (Flutter-based GUI), and **ReactiveX (RxPY)** f
 ## ✨ Features
 
 * **Visual Frame Mapper:** See exactly how your data is distributed down to the single bit. Grouped visualization with custom boundaries (e.g., every 8 bits).
-* **Mixed Data Types:** * `Variable`: Define traditional variables with custom bit sizes.
+* **Mixed Data Types:**
+  * `Variable`: Define traditional variables with custom bit sizes.
   * `Bit Field`: Input raw data in multiple bases (Hex, Dec, Oct, Bin) and see it parsed into bits in real-time.
 * **Drag-and-Drop Reordering:** Easily rearrange fields within your frame using drag-and-drop handles.
 * **Reactive UI:** No manual refreshes. Code generation, total bit calculation, and table layouts update instantly as you type.
