@@ -4,6 +4,9 @@
 
 Built using **Python**, **Flet** (Flutter-based GUI), and **ReactiveX (RxPY)** for a fully reactive, modern user experience.
 
+
+![Image preview](https://raw.githubusercontent.com/Evailix/bit-frame-designer/refs/heads/main/imgs/preview.png)
+
 ---
 
 ## ✨ Features
