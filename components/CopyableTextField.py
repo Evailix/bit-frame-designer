@@ -115,7 +115,7 @@ class CopyableTextField(ft.Column):
 
     def _handle_reload(self, e):
         if self.on_reload_callback:
-            self.on_reload_callback(e)
+            self.on_reload_callback()
 
     def _handle_style_change(self, e):
         if self.on_style_change_callback:

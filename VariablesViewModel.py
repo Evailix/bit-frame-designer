@@ -1,4 +1,5 @@
 import json
+import traceback
 from pathlib import Path
 
 import flet as ft
@@ -95,7 +96,6 @@ class VariablesViewModel:
 
 
 
-
     def update_readers(self):
         dir_path = Path("readers")
         if dir_path.is_dir():
@@ -173,6 +173,7 @@ class VariablesViewModel:
             )
             self.generated_code_writer.on_next(generate_code(f"writers/{self.selected_writer}", context=context).strip())
         except:
+            traceback.print_exc()
             self.generated_code_writer.on_next("Error generating code")
 
         try:
@@ -186,6 +187,7 @@ class VariablesViewModel:
             )
             self.generated_code_reader.on_next(generate_code(f"readers/{self.selected_reader}", context=context).strip())
         except:
+            traceback.print_exc()
             self.generated_code_reader.on_next("Error generating code")
 
     def on_reader_option_change(self, new_reader: str):
@@ -273,6 +275,7 @@ class VariablesViewModel:
 
         self._variables = variables_data
         self.notify_structure_change()
+        self.render_code()
 
     def clear_all_variables(self):
         self._variables.clear()
