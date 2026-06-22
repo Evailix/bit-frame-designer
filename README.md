@@ -63,8 +63,7 @@ When exporting or importing schemas, the tool validates the structure. Here is a
         "type": "bit",
         "title": "StatusFlags",
         "value": "A",
-        "base": 16,
-        "count": "4"
+        "base": 16
     },
     {
         "type": "variable",
