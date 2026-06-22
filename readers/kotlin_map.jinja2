@@ -1,0 +1,55 @@
+{% macro fmt_kt(hex_val, raw_val) -%}
+  {%- if array_base == 16 -%}{{ hex_val }}u{%- else -%}{{ raw_val }}u{%- endif -%}
+{%- endmacro %}
+
+{% macro render_op(op, padding_val=0) -%}
+  {%- if padding_val is string -%}
+    {%- set final_index = padding_val ~ " + " ~ op.array_index -%}
+  {%- else -%}
+    {%- set final_index = padding_val|int + op.array_index|int -%}
+  {%- endif -%}
+
+  {%- if op.byte_shift != 0 -%}
+    {%- set expr = "((data[" ~ final_index ~ "].toUInt() and 0xFFu) shr " ~ op.byte_shift ~ ")" -%}
+  {%- else -%}
+    {%- set expr = "(data[" ~ final_index ~ "].toUInt() and 0xFFu)" -%}
+  {%- endif -%}
+  {%- set expr = expr ~ " and " ~ fmt_kt(op.mask_hex, op.mask) -%}
+  {%- if op.val_shift != 0 -%}({{ expr }} shl {{ op.val_shift }}){%- else -%}{{ expr }}{%- endif -%}
+{%- endmacro %}
+
+{% if is_cyclical %}
+fun {{ function_name }}(data: ByteArray): List<Map<String, UInt>> {
+    val list = mutableListOf<Map<String, UInt>>()
+    val packetSize = {{ packet_size }}
+    val globalPadding = {{ global_padding_bytes }}
+    val count = (data.size - globalPadding) / packetSize
+
+    for (i in 0 until count) {
+        val offset = globalPadding + (i * packetSize)
+
+        {% for field in fields %}
+        val {{ field.name }} = {% for op in field.parts %}{% if field.parts|length > 1 %}({{ render_op(op, "offset") }}){% else %}{{ render_op(op, "offset") }}{% endif %}{{ " or " if not loop.last }}{% endfor %}
+        {% endfor %}
+
+        list.add(
+            mapOf(
+                {% for arg in args %}"{{ arg.name }}" to {{ arg.name }}{{ ", " if not loop.last }}
+                {% endfor %}
+            )
+        )
+    }
+    return list
+}
+{% else %}
+fun {{ function_name }}(data: ByteArray): Map<String, UInt> {
+    {% for field in fields %}
+    val {{ field.name }} = {% for op in field.parts %}{% if field.parts|length > 1 %}({{ render_op(op, global_padding_bytes|int) }}){% else %}{{ render_op(op, global_padding_bytes|int) }}{% endif %}{{ " or " if not loop.last }}{% endfor %}
+    {% endfor %}
+
+    return mapOf(
+        {% for arg in args %}"{{ arg.name }}" to {{ arg.name }}{{ ", " if not loop.last }}
+        {% endfor %}
+    )
+}
+{% endif %}
