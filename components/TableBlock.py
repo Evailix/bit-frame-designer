@@ -95,14 +95,14 @@ class ColoredCompositeTable(ft.Column):
             padding=0
         )
 
-        self.total_bits_text = ft.Text(
+        self.info_text = ft.Text(
             "",
             size=12,
             weight=ft.FontWeight.BOLD,
             text_align=ft.TextAlign.CENTER
         )
 
-        self.controls = [self.table_container, self.total_bits_text]
+        self.controls = [self.table_container, self.info_text]
         self.subscription = None
 
         if config_list:
@@ -160,14 +160,26 @@ class ColoredCompositeTable(ft.Column):
 
         if total_cells_in_table == 0:
             self.table_row.controls.clear()
-            self.total_bits_text.value = "0"
+            self.info_text.value = "Total Bits: 0 | Bytes: 0"
             return
 
-        self.total_bits_text.value = f"{total_cells_in_table}"
+        remainder = total_cells_in_table % self.group_by
+        padding_needed = (self.group_by - remainder) % self.group_by
+        final_total_cells = total_cells_in_table + padding_needed
+        sectors_count = final_total_cells // self.group_by
+
+        if padding_needed > 0:
+            parsed_blocks.append({
+                "title": "Empty",
+                "count": padding_needed,
+                "values": [""] * padding_needed,
+                "header_bg": ft.Colors.BLUE_GREY_200,
+                "cells_bg": ft.Colors.GREY_300
+            })
 
         global_borders = []
-        for abs_index in range(total_cells_in_table):
-            is_absolute_last = (abs_index == total_cells_in_table - 1)
+        for abs_index in range(final_total_cells):
+            is_absolute_last = (abs_index == final_total_cells - 1)
             if is_absolute_last:
                 global_borders.append(ft.BorderSide(0, ft.Colors.TRANSPARENT))
             elif (abs_index + 1) % self.group_by == 0:
@@ -189,6 +201,8 @@ class ColoredCompositeTable(ft.Column):
             block.update_cells(block_data["values"])
             self.table_row.controls.append(block)
 
+        self.info_text.value = f"Total: {total_cells_in_table} (With empty: {final_total_cells}) | Bytes count (by {self.group_by}b): {sectors_count}"
+
     def will_unmount(self):
         if self.subscription:
-            self.subscription.dispose()  # Чистимо ресурси Rx
+            self.subscription.dispose()

@@ -1,4 +1,5 @@
 import json
+from math import ceil
 from pathlib import Path
 
 import flet as ft
@@ -86,7 +87,7 @@ async def main(page: ft.Page):
             page.update()
 
         def confirm_clear(e):
-            vm.clear_all_variables()  # Викликаємо очищення у ViewModel
+            vm.clear_all_variables()
             confirmation_dialog.open = False
             page.update()
 
@@ -161,7 +162,7 @@ async def main(page: ft.Page):
 
     vm.total_bits.subscribe(
         on_next=lambda bits: [
-            setattr(total_bits_text, "value", f"Variables, bits: {bits}"),
+            setattr(total_bits_text, "value", f"Variables, bits={bits} bytes={ceil(bits/8)}"),
             page.update()
         ]
     )
